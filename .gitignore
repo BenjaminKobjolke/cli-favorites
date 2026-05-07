@@ -1,0 +1,17 @@
+.venv/
+__pycache__/
+*.pyc
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+dist/
+build/
+*.egg-info/
+.coverage
+htmlcov/
+.claude
+claude-plans
+.ruff_cache
+.mypy_cache
+.pytest_cache
+.venv
