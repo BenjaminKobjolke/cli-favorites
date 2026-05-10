@@ -45,6 +45,7 @@ def render_capture_bat(project_root: Path, module: str) -> str:
         "setlocal\r\n"
         f'set "PROJECT_ROOT={root_str}\\"\r\n'
         'set "PYTHONPATH=%PROJECT_ROOT%"\r\n'
+        'set "PYTHONSAFEPATH=1"\r\n'
         'set "FAV_TARGET_FILE=%TEMP%\\fav_target_%RANDOM%_%RANDOM%.txt"\r\n'
         'if exist "%FAV_TARGET_FILE%" del /q "%FAV_TARGET_FILE%"\r\n'
         f'"%PROJECT_ROOT%.venv\\Scripts\\python.exe" -m {module} %*\r\n'
@@ -65,6 +66,7 @@ def render_plain_bat(project_root: Path, module: str) -> str:
         "setlocal\r\n"
         f'set "PROJECT_ROOT={root_str}\\"\r\n'
         'set "PYTHONPATH=%PROJECT_ROOT%"\r\n'
+        'set "PYTHONSAFEPATH=1"\r\n'
         f'"%PROJECT_ROOT%.venv\\Scripts\\python.exe" -m {module} %*\r\n'
         "exit /b %ERRORLEVEL%\r\n"
     )

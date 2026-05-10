@@ -48,6 +48,7 @@ def test_install_capture_bat_uses_target_file(tmp_path: Path) -> None:
     assert "cd /d" in fav_bat
     assert "for /f" not in fav_bat
     assert "app.cli.fav" in fav_bat
+    assert 'set "PYTHONSAFEPATH=1"' in fav_bat
 
 
 def test_install_plain_bat_no_cd(tmp_path: Path) -> None:
@@ -64,6 +65,7 @@ def test_install_plain_bat_no_cd(tmp_path: Path) -> None:
     assert "cd /d" not in add_bat
     assert "FAV_TARGET_FILE" not in add_bat
     assert "app.cli.fav_add" in add_bat
+    assert 'set "PYTHONSAFEPATH=1"' in add_bat
 
 
 def test_install_refuses_overwrite_without_force(tmp_path: Path) -> None:
