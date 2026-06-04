@@ -3,7 +3,9 @@ name = "cli-favorites"
 version = "0.1.0"
 description = "Tiny CLI to navigate to favorite directories from a flat file."
 requires-python = ">=3.11,<3.13"
-dependencies = []
+dependencies = [
+    "colorama>=0.4.6",
+]
 
 [project.scripts]
 fav = "app.cli.fav:main"
@@ -29,6 +31,10 @@ select = ["E", "F", "I", "UP", "B", "SIM"]
 python_version = "3.11"
 strict = true
 files = ["app", "tests"]
+
+[[tool.mypy.overrides]]
+module = "colorama.*"
+ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

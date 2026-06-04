@@ -7,13 +7,25 @@ from typing import TextIO
 
 from app.favorites.entry import Favorite
 from app.favorites.path_resolver import resolve
+from app.ui.colors import dim, highlight, should_color
 
 
-def print_menu(items: list[Favorite], stream: TextIO | None = None) -> None:
+def print_menu(
+    items: list[Favorite],
+    stream: TextIO | None = None,
+    highlight_index: int | None = None,
+    color: bool | None = None,
+) -> None:
     out = stream if stream is not None else sys.stderr
+    use_color = should_color(out) if color is None else color
     for idx, fav in enumerate(items, start=1):
         resolved = resolve(fav.raw_path)
-        out.write(f"{idx}. {fav.name} | {resolved}\n")
+        line = f"{idx}. {fav.name} | {resolved}"
+        if idx - 1 == highlight_index:
+            line = highlight(line, use_color)
+        else:
+            line = dim(f"{idx}.", use_color) + line[len(f"{idx}.") :]
+        out.write(f"{line}\n")
     out.flush()
 
 
@@ -49,11 +61,13 @@ def auto_pick_or_prompt(
     items: list[Favorite],
     in_stream: TextIO | None = None,
     out_stream: TextIO | None = None,
+    highlight_index: int | None = None,
+    color: bool | None = None,
 ) -> int | None:
     """Auto-pick if exactly one item; otherwise show menu and prompt."""
     if not items:
         return None
     if len(items) == 1:
         return 0
-    print_menu(items, out_stream)
+    print_menu(items, out_stream, highlight_index=highlight_index, color=color)
     return prompt_index(len(items), in_stream, out_stream)

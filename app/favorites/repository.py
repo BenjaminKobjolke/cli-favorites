@@ -3,12 +3,11 @@
 from __future__ import annotations
 
 import logging
-import os
-import tempfile
 from pathlib import Path
 
 from app.constants import LOG_NAME
 from app.favorites.entry import Favorite, InvalidFavoriteError
+from app.io_utils import atomic_write_text
 
 log = logging.getLogger(LOG_NAME)
 
@@ -36,11 +35,10 @@ class FavoritesRepository:
         return favorites
 
     def save(self, favorites: list[Favorite]) -> None:
-        self._path.parent.mkdir(parents=True, exist_ok=True)
         body = "\n".join(fav.to_line() for fav in favorites)
         if body:
             body += "\n"
-        self._atomic_write(body)
+        atomic_write_text(self._path, body)
 
     def append(self, favorite: Favorite) -> None:
         existing = self.load()
@@ -66,15 +64,3 @@ class FavoritesRepository:
                 self._path,
             )
             return data.decode("cp1252")
-
-    def _atomic_write(self, body: str) -> None:
-        directory = self._path.parent
-        fd, tmp_name = tempfile.mkstemp(prefix=".favoritedirs.", dir=str(directory))
-        try:
-            with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as fh:
-                fh.write(body)
-            os.replace(tmp_name, self._path)
-        except OSError:
-            if os.path.exists(tmp_name):
-                os.unlink(tmp_name)
-            raise

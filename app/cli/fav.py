@@ -29,7 +29,7 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
 
 
 def main() -> int:
-    _, repo, log = bootstrap()
+    _, repo, usage, log = bootstrap()
     try:
         args = _parse_args(sys.argv[1:])
     except SystemExit as err:
@@ -40,17 +40,18 @@ def main() -> int:
         log.error("no favorites found in %s", repo.path)
         return EXIT_FAILURE
 
-    candidates = match(favorites, args.query)
+    candidates = usage.sort(match(favorites, args.query))
     if not candidates:
         log.error("no favorites match %s", " ".join(args.query) or "<empty>")
         return EXIT_FAILURE
 
-    index = auto_pick_or_prompt(candidates)
+    index = auto_pick_or_prompt(candidates, highlight_index=0)
     if index is None:
         log.info("no selection made")
         return EXIT_FAILURE
 
     chosen = candidates[index]
+    usage.record(chosen)
     resolved = str(resolve(chosen.raw_path))
     sys.stderr.write(f"> {chosen.name} | {resolved}\n")
     sys.stderr.flush()

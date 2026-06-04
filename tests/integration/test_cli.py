@@ -152,3 +152,39 @@ def test_fav_del_no_match_exits_failure(fav_file: Path) -> None:
     text = fav_file.read_text(encoding="utf-8")
     assert "fman Data" in text
     assert "Downloads" in text
+
+
+def test_fav_frecency_promotes_picked_entry(fav_file: Path) -> None:
+    fav_file.write_text(
+        "fman Data|~/AppData/Roaming/fman\nFMAN User|~/.fman\n",
+        encoding="utf-8",
+    )
+    usage_file = fav_file.with_name(fav_file.name + ".usage")
+
+    # First run: file order is [fman Data, FMAN User]; pick #2 (FMAN User).
+    first = _run("app.cli.fav", ["fman"], fav_file, stdin="2\n")
+    assert first.returncode == 0, first.stderr
+    assert first.stdout.strip() == str(Path(os.path.expanduser("~/.fman")))
+    assert usage_file.exists()
+
+    # Second run: FMAN User is now most-frecent, so #1 resolves to it.
+    second = _run("app.cli.fav", ["fman"], fav_file, stdin="1\n")
+    assert second.returncode == 0, second.stderr
+    assert second.stdout.strip() == str(Path(os.path.expanduser("~/.fman")))
+
+
+def test_fav_del_prunes_usage(fav_file: Path) -> None:
+    fav_file.write_text(
+        "fman Data|~/AppData/Roaming/fman\nFMAN User|~/.fman\n",
+        encoding="utf-8",
+    )
+    usage_file = fav_file.with_name(fav_file.name + ".usage")
+
+    picked = _run("app.cli.fav", ["fman"], fav_file, stdin="2\n")
+    assert picked.returncode == 0, picked.stderr
+    assert "FMAN User|~/.fman" in usage_file.read_text(encoding="utf-8")
+
+    # FMAN User is now most-frecent → sorts to position #1 in the delete menu.
+    removed = _run("app.cli.fav_del", ["fman"], fav_file, stdin="1\n")
+    assert removed.returncode == 0, removed.stderr
+    assert "FMAN User|~/.fman" not in usage_file.read_text(encoding="utf-8")

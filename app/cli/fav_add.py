@@ -33,7 +33,7 @@ def _read_name_interactive() -> str:
 
 
 def main() -> int:
-    _, repo, log = bootstrap()
+    _, repo, _usage, log = bootstrap()
     try:
         args = _parse_args(sys.argv[1:])
     except SystemExit as err:
