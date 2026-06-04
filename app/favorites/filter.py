@@ -26,7 +26,7 @@ def match(favorites: list[Favorite], tokens: Sequence[str] | str | None) -> list
 
 
 def _haystack(fav: Favorite) -> str:
-    return f"{fav.name}{_HAYSTACK_SEP}{fav.raw_path}".casefold()
+    return _HAYSTACK_SEP.join(fav.searchable_fields()).casefold()
 
 
 def _normalize(tokens: Sequence[str] | str | None) -> list[str]:

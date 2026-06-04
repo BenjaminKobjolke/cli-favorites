@@ -11,7 +11,7 @@ from app.cli._common import EXIT_FAILURE, EXIT_OK, EXIT_USAGE, bootstrap
 from app.constants import ENV_TARGET_FILE
 from app.favorites.filter import match
 from app.favorites.path_resolver import resolve
-from app.ui.menu import auto_pick_or_prompt
+from app.ui.menu import MenuStyle, auto_pick_or_prompt
 
 
 def _parse_args(argv: list[str]) -> argparse.Namespace:
@@ -45,7 +45,7 @@ def main() -> int:
         log.error("no favorites match %s", " ".join(args.query) or "<empty>")
         return EXIT_FAILURE
 
-    index = auto_pick_or_prompt(candidates, highlight_index=0)
+    index = auto_pick_or_prompt(candidates, style=MenuStyle(highlight_index=0))
     if index is None:
         log.info("no selection made")
         return EXIT_FAILURE

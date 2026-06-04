@@ -26,7 +26,9 @@ Tiny Windows CLI that reads `%USERPROFILE%\.favoritedirs` and lets the user
   to avoid corrupting `.favoritedirs` / its `.usage` sidecar.
 - **Path expansion**: only `~` (via `os.path.expanduser`). No env-var or
   custom placeholder expansion. Unresolvable paths fail loudly at `pushd` time.
-- **Filter scope**: name only, case-insensitive substring. Paths are not searched.
+- **Filter scope**: name **and** raw path, case-insensitive substring; multi-token
+  = AND. Tab joiner prevents a token straddling the name/path boundary. The
+  searchable field list is owned by `Favorite.searchable_fields()`.
 - **Frecency**: `fav` / `fav-del` sort matches by usage frecency (count × recency
   weight) before showing the menu; the top result is highlighted. Counts live in
   a JSON sidecar `<favorites_path>.usage` keyed by `"name|raw_path"`. `fav`

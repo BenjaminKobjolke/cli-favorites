@@ -3,7 +3,7 @@ from __future__ import annotations
 import io
 
 from app.favorites.entry import Favorite
-from app.ui.menu import auto_pick_or_prompt, print_menu, prompt_index
+from app.ui.menu import MenuStyle, auto_pick_or_prompt, print_menu, prompt_index
 
 
 def _favs(n: int) -> list[Favorite]:
@@ -62,7 +62,7 @@ def test_auto_pick_multi_prompts() -> None:
 
 def test_print_menu_highlight_colorizes_only_target() -> None:
     out = io.StringIO()
-    print_menu(_favs(3), stream=out, highlight_index=0, color=True)
+    print_menu(_favs(3), stream=out, style=MenuStyle(highlight_index=0, color=True))
     lines = out.getvalue().splitlines()
     assert "\x1b[" in lines[0]
     assert "Item0" in lines[0]
@@ -70,7 +70,7 @@ def test_print_menu_highlight_colorizes_only_target() -> None:
 
 def test_print_menu_color_disabled_is_plain() -> None:
     out = io.StringIO()
-    print_menu(_favs(3), stream=out, highlight_index=0, color=False)
+    print_menu(_favs(3), stream=out, style=MenuStyle(highlight_index=0, color=False))
     text = out.getvalue()
     assert "\x1b[" not in text
     assert "1. Item0" in text

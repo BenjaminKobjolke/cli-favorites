@@ -19,6 +19,10 @@ class Favorite:
     def to_line(self) -> str:
         return f"{self.name}{FIELD_SEPARATOR}{self.raw_path}"
 
+    def searchable_fields(self) -> list[str]:
+        """Field values the filter searches. Add a field here to make it searchable."""
+        return [self.name, self.raw_path]
+
     @classmethod
     def from_line(cls, line: str) -> Favorite:
         stripped = line.rstrip("\r\n")
