@@ -89,6 +89,19 @@ tools\run_integration_tests.bat
 update.bat                                   :: lock --upgrade + sync + ruff + mypy + tests
 ```
 
+## Code Analysis
+
+After implementing new features or making significant changes, run the code analysis:
+
+```bash
+powershell -Command "cd 'D:\GIT\BenjaminKobjolke\cli-favorites'; cmd /c '.\tools\analyze_code.bat'"
+```
+
+Auto-fix what Ruff can (`tools\fix_ruff_issues.bat`; preview with
+`tools\fix_ruff_issues_dry_run.bat`). Rules in `code_analysis_rules.json`.
+Local analyzer path lives in `tools\analyze_code_config.bat` (gitignored; copy
+from `analyze_code_config.example.bat`). Fix any reported issues before committing.
+
 ## When adding features
 
 - Keep modules under 300 lines; split by responsibility.

@@ -15,3 +15,7 @@ claude-plans
 .mypy_cache
 .pytest_cache
 .venv
+
+# Code analysis (cli-code-analyzer)
+tools/analyze_code_config.bat
+code_analysis_results/
