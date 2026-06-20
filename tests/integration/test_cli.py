@@ -110,6 +110,18 @@ def test_fav_multi_match_uses_input(fav_file: Path) -> None:
     assert result.stdout.strip() == expected
 
 
+def test_fav_multi_match_empty_input_picks_top(fav_file: Path) -> None:
+    fav_file.write_text(
+        "fman Data|~/AppData/Roaming/fman\nFMAN User|~/.fman\n",
+        encoding="utf-8",
+    )
+    # Bare Enter on the numbered fallback now accepts the highlighted top row.
+    result = _run("app.cli.fav", ["fman"], fav_file, stdin="\n")
+    assert result.returncode == 0, result.stderr
+    expected = str(Path(os.path.expanduser("~/AppData/Roaming/fman")))
+    assert result.stdout.strip() == expected
+
+
 def test_fav_multi_match_invalid_input_fails(fav_file: Path) -> None:
     fav_file.write_text(
         "fman Data|~/AppData/Roaming/fman\nFMAN User|~/.fman\n",

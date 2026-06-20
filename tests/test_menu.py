@@ -42,6 +42,24 @@ def test_prompt_index_empty_line_returns_none() -> None:
     assert prompt_index(3, in_stream=in_s, out_stream=out) is None
 
 
+def test_prompt_index_empty_line_returns_default_index() -> None:
+    in_s = io.StringIO("\n")
+    out = io.StringIO()
+    assert prompt_index(3, in_stream=in_s, out_stream=out, default_index=0) == 0
+
+
+def test_prompt_index_number_wins_over_default() -> None:
+    in_s = io.StringIO("2\n")
+    out = io.StringIO()
+    assert prompt_index(3, in_stream=in_s, out_stream=out, default_index=0) == 1
+
+
+def test_prompt_index_out_of_range_with_default() -> None:
+    in_s = io.StringIO("9\n")
+    out = io.StringIO()
+    assert prompt_index(3, in_stream=in_s, out_stream=out, default_index=0) is None
+
+
 def test_auto_pick_single_item() -> None:
     in_s = io.StringIO("")
     out = io.StringIO()

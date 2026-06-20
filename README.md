@@ -64,6 +64,12 @@ fav-add                      :: prompts for a name, appends entry
 fav-del fman                 :: filter+pick+remove from the file
 ```
 
+In the selection menu (shown for `fav` / `fav-del` when more than one entry
+matches), navigate with **Up/Down** arrows and confirm with **Enter** — Enter on
+the highlighted top (most-frecent) result picks it. You can also type a number,
+and **Esc** or **q** cancels. When input is piped (not an interactive console)
+the menu falls back to a plain numbered prompt.
+
 `fav.bat` uses `cd /d`. The chosen path is handed off via a temp file
 (`%TEMP%\fav_target_*.txt`) which the wrapper deletes after reading.
 
