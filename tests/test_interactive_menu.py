@@ -46,9 +46,7 @@ def test_enter_immediately_picks_highlighted_default() -> None:
     out = io.StringIO()
     keys = _reader([ENTER])
     assert (
-        select_interactive(
-            _favs(5), highlight_index=2, read_key=keys, out_stream=out, color=False
-        )
+        select_interactive(_favs(5), highlight_index=2, read_key=keys, out_stream=out, color=False)
         == 2
     )
 
