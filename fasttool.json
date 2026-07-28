@@ -1,0 +1,9 @@
+{
+  "id": "clifavorites",
+  "name": "CLI Favorites",
+  "ipc_title": "FastToolIPC::clifavorites",
+  "launch": { "exe": "dist/FavPalette.exe", "args": ["--palette"] },
+  "text_providers": [
+    { "id": "folders", "label": "Favorite Folders", "min_chars": 0 }
+  ]
+}

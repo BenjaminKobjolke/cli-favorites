@@ -82,6 +82,26 @@ Environment variables:
 - `FAV_TARGET_FILE` — set by `fav.bat` to receive the chosen path. If unset,
   Python prints the path on stdout instead.
 
+## FastCommandCenter integration
+
+The repo doubles as an FCC external tool (`fasttool.json`): a "Favorite
+Folders" text provider — type in the palette to filter favorites, pick one
+and FCC copies the resolved path to the clipboard and pastes it into the
+previously focused window.
+
+Setup:
+
+1. Build the palette host exe: `tools\build.bat` → `dist\FavPalette.exe`.
+2. In FCC's palette: `Tools: manage folders` → add this repo's folder, then
+   reopen the palette — "Favorite Folders" appears. Optionally bind a global
+   hotkey to it via `Configure keyboard shortcuts`.
+
+FCC launches `FavPalette.exe --palette` on demand (`app/palette_host.py`,
+using the `fasttool_palette` shim from `FastCommandCenter-tool-bridge`). The
+favorites file is reloaded on every query, so `fav-add`/`fav-del` edits show
+immediately. Selections made through FCC are not reported back, so they don't
+bump frecency — ranking uses counts from normal CLI use.
+
 ## Development
 
 ```bat
