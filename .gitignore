@@ -6,6 +6,7 @@ __pycache__/
 .ruff_cache/
 dist/
 build/
+*.spec
 *.egg-info/
 .coverage
 htmlcov/
