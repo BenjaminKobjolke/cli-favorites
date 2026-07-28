@@ -3,8 +3,8 @@
 Runs only palette-managed (fasttool.json launches the exe with --palette):
 keeps a hidden FastToolIPC window open via the fasttool_palette shim and
 answers each typed query with frecency-sorted favorite paths. FCC owns what
-happens on selection (clipboard + paste) and never reports the pick back, so
-usage counts only grow through normal CLI use.
+happens on selection (clipboard + paste); its fire-and-forget `selected`
+echo is used here to bump the same frecency counts CLI use writes.
 """
 
 from __future__ import annotations
@@ -17,6 +17,7 @@ from fasttool_palette import FastToolPalette, TextSuggestion, palette_mode
 from app.cli._common import EXIT_USAGE
 from app.config.settings import Settings
 from app.constants import LOG_NAME
+from app.favorites.entry import Favorite
 from app.favorites.filter import match
 from app.favorites.path_resolver import resolve
 from app.favorites.repository import FavoritesRepository
@@ -44,6 +45,17 @@ def build_suggestions(query: str, settings: Settings) -> list[TextSuggestion]:
     ]
 
 
+def record_selection(suggestion: TextSuggestion, settings: Settings) -> None:
+    """Bump frecency for the favorite FCC reports as picked.
+
+    title/subtitle round-trip name/raw_path unchanged, so the usage key
+    (`Favorite.to_line()` = ``name|raw_path``) matches what CLI use writes.
+    """
+    UsageStore(settings.usage_path).record(
+        Favorite(name=suggestion.title, raw_path=suggestion.subtitle)
+    )
+
+
 def main() -> int:
     settings = Settings.from_env()
     configure_logging(settings.log_level)
@@ -52,7 +64,9 @@ def main() -> int:
         return EXIT_USAGE
     palette = FastToolPalette(TOOL_ID)
     palette.add_text_provider(
-        PROVIDER_ID, lambda query, _session_id: build_suggestions(query, settings)
+        PROVIDER_ID,
+        lambda query, _session_id: build_suggestions(query, settings),
+        on_selected=lambda suggestion: record_selection(suggestion, settings),
     )
     log.info("palette host running (tool_id=%s, favorites=%s)", TOOL_ID, settings.favorites_path)
     while True:

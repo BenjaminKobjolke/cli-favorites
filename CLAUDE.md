@@ -14,6 +14,10 @@ Tiny Windows CLI that reads `%USERPROFILE%\.favoritedirs` and lets the user
 - `fav-del <filter>` — filter, pick, remove entry.
 - `fav-install-global` — write the three bats into a PATH directory (default `C:\cmdtools`).
 
+Besides the CLI, the repo doubles as a **FastCommandCenter external tool**
+(text provider "Favorite Folders") — see "FastCommandCenter integration"
+below.
+
 ## Architectural choices
 
 - **One runtime dep**: `colorama` (cross-platform color; handles legacy Windows
@@ -52,6 +56,7 @@ app/
 │   ├── usage.py             # UsageStore (frecency sidecar: score/sort/record/remove)
 │   ├── filter.py            # match(favs, query)
 │   └── path_resolver.py     # resolve(raw), collapse_home(path)
+├── palette_host.py          # FCC text provider: build_suggestions, record_selection, main loop
 ├── ui/
 │   ├── menu.py              # print_menu, prompt_index, auto_pick_or_prompt
 │   └── colors.py            # should_color, highlight, dim, init_color
@@ -62,6 +67,34 @@ app/
     ├── fav_del.py           # main: filter → menu → remove
     └── install_global.py    # render+write bat wrappers
 ```
+
+## FastCommandCenter integration
+
+`fasttool.json` (repo root) declares the tool per
+`FastCommandCenter-tool-bridge/CONTRACT.md`: id `clifavorites`, one text
+provider `folders` ("Favorite Folders"). FCC launches
+`dist/FavPalette.exe --palette`; the exe is built by `tools\build.bat`
+(PyInstaller `--onefile --windowed` around `fav_palette.py` →
+`app/palette_host.py`).
+
+- `build_suggestions()` reuses the exact CLI stack (repository → `match()` →
+  `UsageStore.sort()` → `path_resolver.resolve()`); `title=name`,
+  `text=resolved path` (what FCC pastes), `subtitle=raw_path`. The favorites
+  file is reloaded on every query so `fav-add`/`fav-del` edits show live.
+- `record_selection()` handles FCC's fire-and-forget `selected` echo:
+  rebuilds `Favorite(name=title, raw_path=subtitle)` and calls
+  `UsageStore.record()` — same `name|raw_path` key CLI use writes, so both
+  paths share one frecency store.
+- Dependencies: `fasttool-palette` (editable uv path dep on the tool-bridge
+  repo's client shim) + `pyinstaller` (dev).
+
+**Deployment trap**: FCC runs whatever exe its configured tool folder's
+manifest names — currently `D:\GIT\BenjaminKobjolke\FastTools\FavPalette\`,
+a *flat* copy (exe next to manifest, `"exe": "FavPalette.exe"` — NOT this
+repo's `dist/` layout). After rebuilding, copy `dist\FavPalette.exe` there,
+kill any running `FavPalette.exe`, and note FCC only re-reads manifests on
+restart or a `Tools: manage folders` change. A stale or missing exe shows up
+as an eternal "Loading suggestions..." in FCC, not as an error.
 
 ## Conventions specific to this project
 

@@ -99,8 +99,9 @@ Setup:
 FCC launches `FavPalette.exe --palette` on demand (`app/palette_host.py`,
 using the `fasttool_palette` shim from `FastCommandCenter-tool-bridge`). The
 favorites file is reloaded on every query, so `fav-add`/`fav-del` edits show
-immediately. Selections made through FCC are not reported back, so they don't
-bump frecency — ranking uses counts from normal CLI use.
+immediately. FCC echoes each pick back to the tool (the v3 `selected`
+message), so selections made through FCC bump the same frecency counts as
+normal CLI use.
 
 ## Development
 

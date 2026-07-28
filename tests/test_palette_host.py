@@ -7,7 +7,7 @@ import time
 from pathlib import Path
 
 from app.config.settings import Settings
-from app.palette_host import build_suggestions
+from app.palette_host import build_suggestions, record_selection
 
 
 def _settings(tmp_path: Path) -> Settings:
@@ -64,3 +64,20 @@ def test_text_is_resolved_path_and_subtitle_is_raw(tmp_path: Path) -> None:
 def test_missing_favorites_file_returns_empty(tmp_path: Path) -> None:
     settings = _settings(tmp_path)
     assert build_suggestions("anything", settings) == []
+
+
+def test_record_selection_bumps_frecency(tmp_path: Path) -> None:
+    settings = _settings(tmp_path)
+    _write_favorites(settings, ["cold|C:\\cold", "warm|C:\\warm"])
+    suggestion = build_suggestions("warm", settings)[0]
+
+    record_selection(suggestion, settings)
+
+    results = build_suggestions("", settings)
+    assert [r.title for r in results] == ["warm", "cold"]
+    usage = json.loads(settings.usage_path.read_text(encoding="utf-8"))
+    assert usage["warm|C:\\warm"]["count"] == 1
+
+    record_selection(suggestion, settings)
+    usage = json.loads(settings.usage_path.read_text(encoding="utf-8"))
+    assert usage["warm|C:\\warm"]["count"] == 2
