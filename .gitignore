@@ -20,3 +20,4 @@ claude-plans
 # Code analysis (cli-code-analyzer)
 tools/analyze_code_config.bat
 code_analysis_results/
+tmp/commit_msg.tmp
