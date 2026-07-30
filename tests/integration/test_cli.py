@@ -25,6 +25,7 @@ def _run(
     args: list[str],
     favorites_path: Path,
     stdin: str = "",
+    cwd: Path = PROJECT_ROOT,
 ) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
         [sys.executable, "-m", module, *args],
@@ -32,7 +33,7 @@ def _run(
         capture_output=True,
         text=True,
         env=_env(favorites_path),
-        cwd=PROJECT_ROOT,
+        cwd=cwd,
         timeout=15,
         check=False,
     )
@@ -150,7 +151,7 @@ def test_fav_add_rejects_pipe_in_name(tmp_path: Path) -> None:
 
 
 def test_fav_del_removes_entry(fav_file: Path) -> None:
-    result = _run("app.cli.fav_del", ["Downloads"], fav_file)
+    result = _run("app.cli.fav_del", ["Downloads"], fav_file, stdin="y\n")
     assert result.returncode == 0, result.stderr
     text = fav_file.read_text(encoding="utf-8")
     assert "Downloads" not in text
@@ -164,6 +165,32 @@ def test_fav_del_no_match_exits_failure(fav_file: Path) -> None:
     text = fav_file.read_text(encoding="utf-8")
     assert "fman Data" in text
     assert "Downloads" in text
+
+
+def test_fav_del_declined_confirm_keeps_entry(fav_file: Path) -> None:
+    result = _run("app.cli.fav_del", ["Downloads"], fav_file, stdin="n\n")
+    assert result.returncode != 0
+    assert "Downloads" in fav_file.read_text(encoding="utf-8")
+
+
+def test_fav_del_yes_flag_skips_confirm(fav_file: Path) -> None:
+    result = _run("app.cli.fav_del", ["Downloads", "--yes"], fav_file)
+    assert result.returncode == 0, result.stderr
+    assert "Downloads" not in fav_file.read_text(encoding="utf-8")
+
+
+def test_fav_del_no_args_current_dir_favorite(fav_file: Path, tmp_path: Path) -> None:
+    cwd_dir = tmp_path / "here"
+    cwd_dir.mkdir()
+    fav_file.write_text(
+        f"fman Data|~/AppData/Roaming/fman\nHere|{cwd_dir}\n",
+        encoding="utf-8",
+    )
+    result = _run("app.cli.fav_del", [], fav_file, stdin="y\n", cwd=cwd_dir)
+    assert result.returncode == 0, result.stderr
+    text = fav_file.read_text(encoding="utf-8")
+    assert "Here" not in text
+    assert "fman Data" in text
 
 
 def test_fav_frecency_promotes_picked_entry(fav_file: Path) -> None:
@@ -197,6 +224,6 @@ def test_fav_del_prunes_usage(fav_file: Path) -> None:
     assert "FMAN User|~/.fman" in usage_file.read_text(encoding="utf-8")
 
     # FMAN User is now most-frecent → sorts to position #1 in the delete menu.
-    removed = _run("app.cli.fav_del", ["fman"], fav_file, stdin="1\n")
+    removed = _run("app.cli.fav_del", ["fman"], fav_file, stdin="1\ny\n")
     assert removed.returncode == 0, removed.stderr
     assert "FMAN User|~/.fman" not in usage_file.read_text(encoding="utf-8")

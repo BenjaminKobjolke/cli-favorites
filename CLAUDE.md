@@ -11,7 +11,9 @@ Tiny Windows CLI that reads `%USERPROFILE%\.favoritedirs` and lets the user
 - `fav <filter>` — filter, auto-pick if single match, otherwise menu, print
   resolved path on **stdout**. The bat wrapper captures stdout and `pushd`'s.
 - `fav-add` — append CWD as new entry, prompts for name (or `--name`).
-- `fav-del <filter>` — filter, pick, remove entry.
+- `fav-del [filter]` — filter, pick, remove entry; always confirms `[y/N]`
+  before deleting (`-y/--yes` skips). No filter: offers to delete the current
+  directory if it's a favorite, else falls back to the full picker.
 - `fav-install-global` — write the three bats into a PATH directory (default `C:\cmdtools`).
 
 Besides the CLI, the repo doubles as a **FastCommandCenter external tool**
@@ -64,7 +66,7 @@ app/
     ├── _common.py           # exit codes, bootstrap()
     ├── fav.py               # main: filter → menu → print stdout
     ├── fav_add.py           # main: prompt name, append
-    ├── fav_del.py           # main: filter → menu → remove
+    ├── fav_del.py           # main: cwd-favorite check/menu → confirm → remove
     └── install_global.py    # render+write bat wrappers
 ```
 

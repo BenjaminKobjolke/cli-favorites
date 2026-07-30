@@ -11,7 +11,7 @@ and lets you `pushd` into a chosen entry from any shell.
 | ---------------------- | ---------------------------------------------------------- |
 | `fav <token>...`       | Filter favorites by all tokens (AND, case-insensitive substring); auto-pick if 1 match, else menu; `pushd` to selection. |
 | `fav-add`              | Append the current directory as a new favorite (prompts for name). |
-| `fav-del <token>...`   | Filter, pick, delete the chosen entry from the file.       |
+| `fav-del [token]...`   | Filter, pick, delete the chosen entry (asks `[y/N]` first). No tokens: offers to delete the current directory if it's a favorite, else lists all. `-y/--yes` skips confirmation. |
 | `fav-install-global`   | Copy the three bats above into a directory on your PATH (default `C:\cmdtools`). |
 
 The filter is a case-insensitive substring match against the favorite name **and**
@@ -61,7 +61,9 @@ fav                          :: lists every favorite
 cd D:\some\new\project
 fav-add                      :: prompts for a name, appends entry
 
-fav-del fman                 :: filter+pick+remove from the file
+fav-del fman                 :: filter+pick+confirm+remove from the file
+fav-del                      :: cwd is a favorite? offers to delete it, else lists all
+fav-del fman --yes           :: skip the [y/N] confirmation
 ```
 
 In the selection menu (shown for `fav` / `fav-del` when more than one entry
