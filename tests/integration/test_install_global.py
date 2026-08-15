@@ -17,7 +17,7 @@ def _env() -> dict[str, str]:
     return env
 
 
-def test_install_writes_three_bats(tmp_path: Path) -> None:
+def test_install_writes_all_bats(tmp_path: Path) -> None:
     result = subprocess.run(
         [sys.executable, "-m", "app.cli.install_global", str(tmp_path)],
         capture_output=True,
@@ -31,6 +31,25 @@ def test_install_writes_three_bats(tmp_path: Path) -> None:
     assert (tmp_path / "fav.bat").exists()
     assert (tmp_path / "fav-add.bat").exists()
     assert (tmp_path / "fav-del.bat").exists()
+    assert (tmp_path / "fav-set-limit.bat").exists()
+    assert (tmp_path / "fav-name.bat").exists()
+    assert (tmp_path / "fav-dir.bat").exists()
+
+
+def test_install_set_limit_bat_passes_flag(tmp_path: Path) -> None:
+    subprocess.run(
+        [sys.executable, "-m", "app.cli.install_global", str(tmp_path)],
+        capture_output=True,
+        text=True,
+        env=_env(),
+        cwd=PROJECT_ROOT,
+        timeout=15,
+        check=False,
+    )
+    bat = (tmp_path / "fav-set-limit.bat").read_text(encoding="utf-8")
+    assert "app.cli.fav --set-limit %*" in bat
+    assert "cd /d" not in bat
+    assert "FAV_TARGET_FILE" not in bat
 
 
 def test_install_capture_bat_uses_target_file(tmp_path: Path) -> None:
@@ -66,6 +85,38 @@ def test_install_plain_bat_no_cd(tmp_path: Path) -> None:
     assert "FAV_TARGET_FILE" not in add_bat
     assert "app.cli.fav_add" in add_bat
     assert 'set "PYTHONSAFEPATH=1"' in add_bat
+
+
+def test_install_name_bat_is_capture_style_with_scope(tmp_path: Path) -> None:
+    subprocess.run(
+        [sys.executable, "-m", "app.cli.install_global", str(tmp_path)],
+        capture_output=True,
+        text=True,
+        env=_env(),
+        cwd=PROJECT_ROOT,
+        timeout=15,
+        check=False,
+    )
+    bat = (tmp_path / "fav-name.bat").read_text(encoding="utf-8")
+    assert "FAV_TARGET_FILE" in bat
+    assert "cd /d" in bat
+    assert "app.cli.fav --scope name %*" in bat
+
+
+def test_install_dir_bat_is_capture_style_with_scope(tmp_path: Path) -> None:
+    subprocess.run(
+        [sys.executable, "-m", "app.cli.install_global", str(tmp_path)],
+        capture_output=True,
+        text=True,
+        env=_env(),
+        cwd=PROJECT_ROOT,
+        timeout=15,
+        check=False,
+    )
+    bat = (tmp_path / "fav-dir.bat").read_text(encoding="utf-8")
+    assert "FAV_TARGET_FILE" in bat
+    assert "cd /d" in bat
+    assert "app.cli.fav --scope path %*" in bat
 
 
 def test_install_refuses_overwrite_without_force(tmp_path: Path) -> None:

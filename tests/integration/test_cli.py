@@ -133,6 +133,26 @@ def test_fav_multi_match_invalid_input_fails(fav_file: Path) -> None:
     assert result.stdout.strip() == ""
 
 
+def test_fav_scope_name_excludes_path_only_match(fav_file: Path) -> None:
+    # "Roaming" only appears in the path of "fman Data" — name scope must miss it.
+    result = _run("app.cli.fav", ["Roaming", "--scope", "name"], fav_file)
+    assert result.returncode != 0
+    assert result.stdout.strip() == ""
+
+
+def test_fav_scope_path_matches_path_only_substring(fav_file: Path) -> None:
+    result = _run("app.cli.fav", ["Roaming", "--scope", "path"], fav_file)
+    assert result.returncode == 0, result.stderr
+    expected = str(Path(os.path.expanduser("~/AppData/Roaming/fman")))
+    assert result.stdout.strip() == expected
+
+
+def test_fav_del_scope_name_excludes_path_only_match(fav_file: Path) -> None:
+    result = _run("app.cli.fav_del", ["Roaming", "--scope", "name"], fav_file)
+    assert result.returncode != 0
+    assert "fman Data" in fav_file.read_text(encoding="utf-8")
+
+
 def test_fav_add_with_name_flag(tmp_path: Path) -> None:
     fav_file = tmp_path / ".favoritedirs"
     fav_file.write_text("Existing|/x\n", encoding="utf-8")
@@ -191,6 +211,31 @@ def test_fav_del_no_args_current_dir_favorite(fav_file: Path, tmp_path: Path) ->
     text = fav_file.read_text(encoding="utf-8")
     assert "Here" not in text
     assert "fman Data" in text
+
+
+def test_fav_set_limit_persists_and_caps_menu(fav_file: Path) -> None:
+    config_file = fav_file.with_name(fav_file.name + ".config")
+
+    result = _run("app.cli.fav", ["--set-limit", "2"], fav_file)
+    assert result.returncode == 0, result.stderr
+    assert config_file.exists()
+
+    # All 3 favorites match the empty query, but the menu is capped at 2:
+    # picking #3 must now be an invalid index.
+    capped = _run("app.cli.fav", [], fav_file, stdin="3\n")
+    assert capped.returncode != 0
+    assert capped.stdout.strip() == ""
+
+    # Picking #2 (last visible row) still works.
+    ok = _run("app.cli.fav", [], fav_file, stdin="2\n")
+    assert ok.returncode == 0, ok.stderr
+    assert ok.stdout.strip() != ""
+
+
+def test_fav_set_limit_rejects_non_positive(fav_file: Path) -> None:
+    result = _run("app.cli.fav", ["--set-limit", "0"], fav_file)
+    assert result.returncode == 2
+    assert not fav_file.with_name(fav_file.name + ".config").exists()
 
 
 def test_fav_frecency_promotes_picked_entry(fav_file: Path) -> None:

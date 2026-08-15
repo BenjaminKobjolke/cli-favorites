@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from app.constants import (
+    CONFIG_FILENAME_SUFFIX,
     ENV_FAVORITES_PATH,
     ENV_LOG_LEVEL,
     FAVORITES_FILENAME,
@@ -20,6 +21,7 @@ DEFAULT_LOG_LEVEL = "INFO"
 class Settings:
     favorites_path: Path
     usage_path: Path
+    config_path: Path
     log_level: str
 
     @classmethod
@@ -27,8 +29,10 @@ class Settings:
         raw = os.getenv(ENV_FAVORITES_PATH)
         favorites_path = Path(raw) if raw else Path.home() / FAVORITES_FILENAME
         usage_path = favorites_path.with_name(favorites_path.name + USAGE_FILENAME_SUFFIX)
+        config_path = favorites_path.with_name(favorites_path.name + CONFIG_FILENAME_SUFFIX)
         return cls(
             favorites_path=favorites_path,
             usage_path=usage_path,
+            config_path=config_path,
             log_level=os.getenv(ENV_LOG_LEVEL, DEFAULT_LOG_LEVEL),
         )

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from app.favorites.entry import Favorite
+from app.favorites.entry import Favorite, SearchScope
 from app.favorites.filter import match
 
 
@@ -74,3 +74,30 @@ def test_name_and_path_tokens_combined() -> None:
     """Tokens AND across the joined haystack: 'erp' (name) + 'api' (path)."""
     result = match(_favs(), ["erp", "api"])
     assert [f.name for f in result] == ["ERP API"]
+
+
+def test_scope_name_excludes_path_only_match() -> None:
+    """'AppData' lives only in the path of 'fman Data' — NAME scope must miss it."""
+    result = match(_favs(), "AppData", scope=SearchScope.NAME)
+    assert result == []
+
+
+def test_scope_path_excludes_name_only_match() -> None:
+    """A token only present in the name must miss under PATH scope."""
+    favs = [Favorite(name="Unique Nickname", raw_path="D:/some/dir")]
+    result = match(favs, "Nickname", scope=SearchScope.PATH)
+    assert result == []
+
+
+def test_scope_path_matches_path_substring() -> None:
+    result = match(_favs(), "erp-api", scope=SearchScope.PATH)
+    assert [f.name for f in result] == ["ERP API"]
+
+
+def test_scope_name_matches_name_substring() -> None:
+    result = match(_favs(), "fman", scope=SearchScope.NAME)
+    assert [f.name for f in result] == ["fman Data", "FMAN User Home"]
+
+
+def test_scope_default_is_both() -> None:
+    assert match(_favs(), "AppData") == match(_favs(), "AppData", scope=SearchScope.BOTH)

@@ -10,13 +10,23 @@ and lets you `pushd` into a chosen entry from any shell.
 | Command                | What it does                                               |
 | ---------------------- | ---------------------------------------------------------- |
 | `fav <token>...`       | Filter favorites by all tokens (AND, case-insensitive substring); auto-pick if 1 match, else menu; `pushd` to selection. |
+| `fav --scope {name,path,both}` | Restrict the filter to the favorite name, its path, or both (default). |
+| `fav --set-limit N`    | Persist the max number of results shown in menus and the FCC palette (default 10). |
+| `fav-name <token>...`  | Same as `fav`, but filters the name only (shortcut for `fav --scope name`). |
+| `fav-dir <token>...`   | Same as `fav`, but filters the path only (shortcut for `fav --scope path`). |
 | `fav-add`              | Append the current directory as a new favorite (prompts for name). |
-| `fav-del [token]...`   | Filter, pick, delete the chosen entry (asks `[y/N]` first). No tokens: offers to delete the current directory if it's a favorite, else lists all. `-y/--yes` skips confirmation. |
-| `fav-install-global`   | Copy the three bats above into a directory on your PATH (default `C:\cmdtools`). |
+| `fav-del [token]...`   | Filter, pick, delete the chosen entry (asks `[y/N]` first). No tokens: offers to delete the current directory if it's a favorite, else lists all. `-y/--yes` skips confirmation. `--scope` works the same as on `fav`. |
+| `fav-install-global`   | Copy the bat wrappers above into a directory on your PATH (default `C:\cmdtools`). |
 
 The filter is a case-insensitive substring match against the favorite name **and**
 its path. Multiple tokens are AND-ed (`fav erp api` → entries whose name+path
-contains both "erp" AND "api"). Pass no tokens to see every entry.
+contains both "erp" AND "api"). Pass no tokens to see every entry. Add
+`--scope name` or `--scope path` (or use `fav-name` / `fav-dir`) to search only
+one field.
+
+Menus and palette suggestions show at most **10** results (frecency-sorted, so
+the best matches survive the cut). Change the cap persistently with
+`fav --set-limit N`; narrow with more filter tokens to reach hidden entries.
 
 ## Favorites file format
 
@@ -44,7 +54,8 @@ install.bat
 
 Runs `uv sync` and the unit tests. After that:
 
-- `fav.bat`, `fav-add.bat`, `fav-del.bat` work from cmd.exe.
+- `fav.bat`, `fav-add.bat`, `fav-del.bat`, `fav-set-limit.bat`, `fav-name.bat`,
+  `fav-dir.bat` work from cmd.exe.
 - Run `fav-install-global.bat` to copy them into a directory on your PATH so
   they work from anywhere. Default target is `C:\cmdtools`.
 
@@ -57,6 +68,9 @@ fav fman                     :: shows menu of all "fman" matches, picks one, cd'
 fav erp api                  :: AND filter — both tokens must match
 fav downloads                :: auto-picks single match, cd's to ~/Downloads
 fav                          :: lists every favorite
+fav --scope name erp         :: name-only filter (same as: fav-name erp)
+fav-name erp                 :: shortcut for fav --scope name
+fav-dir api                  :: shortcut for fav --scope path
 
 cd D:\some\new\project
 fav-add                      :: prompts for a name, appends entry
@@ -64,6 +78,8 @@ fav-add                      :: prompts for a name, appends entry
 fav-del fman                 :: filter+pick+confirm+remove from the file
 fav-del                      :: cwd is a favorite? offers to delete it, else lists all
 fav-del fman --yes           :: skip the [y/N] confirmation
+
+fav --set-limit 20           :: show up to 20 results from now on (default 10)
 ```
 
 In the selection menu (shown for `fav` / `fav-del` when more than one entry
@@ -83,6 +99,11 @@ Environment variables:
 - `FAV_LOG_LEVEL` — `DEBUG`, `INFO` (default), `WARNING`, `ERROR`.
 - `FAV_TARGET_FILE` — set by `fav.bat` to receive the chosen path. If unset,
   Python prints the path on stdout instead.
+
+Persistent preferences live in a JSON sidecar `<favorites>.config` (e.g.
+`%USERPROFILE%\.favoritedirs.config`), currently just `max_results` — set it
+via `fav --set-limit N`. A missing or corrupt file falls back to the default
+of 10.
 
 ## FastCommandCenter integration
 

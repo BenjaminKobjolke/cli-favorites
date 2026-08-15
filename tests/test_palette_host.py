@@ -15,6 +15,7 @@ def _settings(tmp_path: Path) -> Settings:
     return Settings(
         favorites_path=favorites_path,
         usage_path=favorites_path.with_name(favorites_path.name + ".usage"),
+        config_path=favorites_path.with_name(favorites_path.name + ".config"),
         log_level="INFO",
     )
 
@@ -64,6 +65,19 @@ def test_text_is_resolved_path_and_subtitle_is_raw(tmp_path: Path) -> None:
 def test_missing_favorites_file_returns_empty(tmp_path: Path) -> None:
     settings = _settings(tmp_path)
     assert build_suggestions("anything", settings) == []
+
+
+def test_suggestions_capped_at_default_max(tmp_path: Path) -> None:
+    settings = _settings(tmp_path)
+    _write_favorites(settings, [f"fav{i}|C:\\fav{i}" for i in range(15)])
+    assert len(build_suggestions("", settings)) == 10
+
+
+def test_suggestions_capped_at_configured_max(tmp_path: Path) -> None:
+    settings = _settings(tmp_path)
+    _write_favorites(settings, [f"fav{i}|C:\\fav{i}" for i in range(15)])
+    settings.config_path.write_text(json.dumps({"max_results": 3}), encoding="utf-8")
+    assert len(build_suggestions("", settings)) == 3
 
 
 def test_record_selection_bumps_frecency(tmp_path: Path) -> None:

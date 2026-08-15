@@ -24,12 +24,16 @@ class BatSpec:
     filename: str
     module: str
     capture_path: bool
+    extra_args: tuple[str, ...] = ()
 
 
 BAT_FILES: tuple[BatSpec, ...] = (
     BatSpec("fav.bat", "app.cli.fav", capture_path=True),
     BatSpec("fav-add.bat", "app.cli.fav_add", capture_path=False),
     BatSpec("fav-del.bat", "app.cli.fav_del", capture_path=False),
+    BatSpec("fav-set-limit.bat", "app.cli.fav", capture_path=False, extra_args=("--set-limit",)),
+    BatSpec("fav-name.bat", "app.cli.fav", capture_path=True, extra_args=("--scope", "name")),
+    BatSpec("fav-dir.bat", "app.cli.fav", capture_path=True, extra_args=("--scope", "path")),
 )
 
 
@@ -37,9 +41,10 @@ class InstallError(Exception):
     """Raised when bat installation fails for a domain reason."""
 
 
-def render_capture_bat(project_root: Path, module: str) -> str:
+def render_capture_bat(project_root: Path, module: str, extra_args: tuple[str, ...] = ()) -> str:
     """Wrapper that hands off the chosen path via a temp file, then cd's into it."""
     root_str = str(project_root).replace("/", "\\")
+    args = "".join(f" {arg}" for arg in extra_args)
     return (
         "@echo off\r\n"
         "setlocal\r\n"
@@ -48,7 +53,7 @@ def render_capture_bat(project_root: Path, module: str) -> str:
         'set "PYTHONSAFEPATH=1"\r\n'
         'set "FAV_TARGET_FILE=%TEMP%\\fav_target_%RANDOM%_%RANDOM%.txt"\r\n'
         'if exist "%FAV_TARGET_FILE%" del /q "%FAV_TARGET_FILE%"\r\n'
-        f'"%PROJECT_ROOT%.venv\\Scripts\\python.exe" -m {module} %*\r\n'
+        f'"%PROJECT_ROOT%.venv\\Scripts\\python.exe" -m {module}{args} %*\r\n'
         'set "TARGET="\r\n'
         'if exist "%FAV_TARGET_FILE%" (\r\n'
         '    set /p TARGET=<"%FAV_TARGET_FILE%"\r\n'
@@ -58,24 +63,25 @@ def render_capture_bat(project_root: Path, module: str) -> str:
     )
 
 
-def render_plain_bat(project_root: Path, module: str) -> str:
+def render_plain_bat(project_root: Path, module: str, extra_args: tuple[str, ...] = ()) -> str:
     """Wrapper that runs the python entry point and exits with its code."""
     root_str = str(project_root).replace("/", "\\")
+    args = "".join(f" {arg}" for arg in extra_args)
     return (
         "@echo off\r\n"
         "setlocal\r\n"
         f'set "PROJECT_ROOT={root_str}\\"\r\n'
         'set "PYTHONPATH=%PROJECT_ROOT%"\r\n'
         'set "PYTHONSAFEPATH=1"\r\n'
-        f'"%PROJECT_ROOT%.venv\\Scripts\\python.exe" -m {module} %*\r\n'
+        f'"%PROJECT_ROOT%.venv\\Scripts\\python.exe" -m {module}{args} %*\r\n'
         "exit /b %ERRORLEVEL%\r\n"
     )
 
 
 def render_bat(project_root: Path, spec: BatSpec) -> str:
     if spec.capture_path:
-        return render_capture_bat(project_root, spec.module)
-    return render_plain_bat(project_root, spec.module)
+        return render_capture_bat(project_root, spec.module, spec.extra_args)
+    return render_plain_bat(project_root, spec.module, spec.extra_args)
 
 
 def install_bats(project_root: Path, target_dir: Path, overwrite: bool) -> list[Path]:
@@ -122,7 +128,7 @@ def _confirm_overwrite(existing_names: list[str]) -> bool:
 def _parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         prog="fav-install-global",
-        description="Install fav.bat / fav-add.bat / fav-del.bat into a directory on your PATH.",
+        description="Install the fav* bat wrappers into a directory on your PATH.",
     )
     parser.add_argument(
         "target",

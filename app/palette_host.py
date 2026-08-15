@@ -16,6 +16,7 @@ from fasttool_palette import FastToolPalette, TextSuggestion, palette_mode
 
 from app.cli._common import EXIT_USAGE
 from app.config.settings import Settings
+from app.config.user_config import UserConfig
 from app.constants import LOG_NAME
 from app.favorites.entry import Favorite
 from app.favorites.filter import match
@@ -39,6 +40,7 @@ def build_suggestions(query: str, settings: Settings) -> list[TextSuggestion]:
     """
     favorites = FavoritesRepository(settings.favorites_path).load()
     ranked = UsageStore(settings.usage_path).sort(match(favorites, query))
+    ranked = ranked[: UserConfig.load(settings.config_path).max_results]
     return [
         TextSuggestion(title=fav.name, text=str(resolve(fav.raw_path)), subtitle=fav.raw_path)
         for fav in ranked

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from app.favorites.entry import Favorite, InvalidFavoriteError, validate_name
+from app.favorites.entry import Favorite, InvalidFavoriteError, SearchScope, validate_name
 
 
 def test_to_line_round_trip() -> None:
@@ -53,3 +53,18 @@ def test_validate_name_rejects_pipe() -> None:
 def test_validate_name_rejects_newline() -> None:
     with pytest.raises(InvalidFavoriteError):
         validate_name("multi\nline")
+
+
+def test_searchable_fields_default_is_both() -> None:
+    fav = Favorite(name="fman Data", raw_path="~/AppData/fman")
+    assert fav.searchable_fields() == ["fman Data", "~/AppData/fman"]
+
+
+def test_searchable_fields_name_scope() -> None:
+    fav = Favorite(name="fman Data", raw_path="~/AppData/fman")
+    assert fav.searchable_fields(SearchScope.NAME) == ["fman Data"]
+
+
+def test_searchable_fields_path_scope() -> None:
+    fav = Favorite(name="fman Data", raw_path="~/AppData/fman")
+    assert fav.searchable_fields(SearchScope.PATH) == ["~/AppData/fman"]

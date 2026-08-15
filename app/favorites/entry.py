@@ -3,12 +3,21 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from enum import Enum
 
-from app.constants import FIELD_SEPARATOR
+from app.constants import FIELD_SEPARATOR, SCOPE_BOTH, SCOPE_NAME, SCOPE_PATH
 
 
 class InvalidFavoriteError(ValueError):
     """Raised when a favorite line/name/path is malformed."""
+
+
+class SearchScope(Enum):
+    """Which field(s) of a favorite the filter searches."""
+
+    NAME = SCOPE_NAME
+    PATH = SCOPE_PATH
+    BOTH = SCOPE_BOTH
 
 
 @dataclass(frozen=True)
@@ -19,8 +28,12 @@ class Favorite:
     def to_line(self) -> str:
         return f"{self.name}{FIELD_SEPARATOR}{self.raw_path}"
 
-    def searchable_fields(self) -> list[str]:
+    def searchable_fields(self, scope: SearchScope = SearchScope.BOTH) -> list[str]:
         """Field values the filter searches. Add a field here to make it searchable."""
+        if scope is SearchScope.NAME:
+            return [self.name]
+        if scope is SearchScope.PATH:
+            return [self.raw_path]
         return [self.name, self.raw_path]
 
     @classmethod

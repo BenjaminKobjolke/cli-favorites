@@ -10,11 +10,17 @@ Tiny Windows CLI that reads `%USERPROFILE%\.favoritedirs` and lets the user
 
 - `fav <filter>` — filter, auto-pick if single match, otherwise menu, print
   resolved path on **stdout**. The bat wrapper captures stdout and `pushd`'s.
+  `fav --set-limit N` persists the result cap (see "Max results" below).
+  `--scope {name,path,both}` restricts which field is filtered (see "Filter
+  scope" below); `fav-name`/`fav-dir` are fixed-scope shortcuts of the same
+  `fav.py` entry point.
 - `fav-add` — append CWD as new entry, prompts for name (or `--name`).
 - `fav-del [filter]` — filter, pick, remove entry; always confirms `[y/N]`
   before deleting (`-y/--yes` skips). No filter: offers to delete the current
-  directory if it's a favorite, else falls back to the full picker.
-- `fav-install-global` — write the three bats into a PATH directory (default `C:\cmdtools`).
+  directory if it's a favorite, else falls back to the full picker. Also
+  accepts `--scope`.
+- `fav-install-global` — write the bat wrappers (incl. `fav-set-limit.bat`,
+  `fav-name.bat`, `fav-dir.bat`) into a PATH directory (default `C:\cmdtools`).
 
 Besides the CLI, the repo doubles as a **FastCommandCenter external tool**
 (text provider "Favorite Folders") — see "FastCommandCenter integration"
@@ -24,17 +30,24 @@ below.
 
 - **One runtime dep**: `colorama` (cross-platform color; handles legacy Windows
   consoles). Everything else is stdlib. Dev deps: `pytest`, `ruff`, `mypy`.
-- **Path capture trick**: only `fav.bat` is "capture" style (`for /f` + `pushd`).
-  `fav-add.bat` / `fav-del.bat` are plain wrappers. Python diagnostics go to
-  **stderr**; only the chosen path goes to stdout.
+- **Path capture trick**: `fav.bat`, `fav-name.bat`, `fav-dir.bat` are "capture"
+  style (`FAV_TARGET_FILE` + `cd /d`). `fav-add.bat` / `fav-del.bat` /
+  `fav-set-limit.bat` are plain wrappers. Python diagnostics go to **stderr**;
+  only the chosen path goes to stdout.
 - **Atomic file writes**: `tempfile.mkstemp` + `os.replace` in
   `io_utils.atomic_write_text`, shared by `FavoritesRepository` and `UsageStore`,
   to avoid corrupting `.favoritedirs` / its `.usage` sidecar.
 - **Path expansion**: only `~` (via `os.path.expanduser`). No env-var or
   custom placeholder expansion. Unresolvable paths fail loudly at `pushd` time.
-- **Filter scope**: name **and** raw path, case-insensitive substring; multi-token
-  = AND. Tab joiner prevents a token straddling the name/path boundary. The
-  searchable field list is owned by `Favorite.searchable_fields()`.
+- **Filter scope**: name **and** raw path (default), case-insensitive substring;
+  multi-token = AND. Tab joiner prevents a token straddling the name/path
+  boundary. The searchable field list is owned by
+  `Favorite.searchable_fields(scope)`, keyed off `favorites.entry.SearchScope`
+  (`NAME`/`PATH`/`BOTH`). `filter.match(..., scope=...)` threads it through;
+  `filter.add_scope_argument()`/`scope_from_args()` give `fav`/`fav-del` a
+  shared `--scope {name,path,both}` flag. `fav-name.bat`/`fav-dir.bat` are
+  `fav.bat` clones with a fixed `--scope name`/`--scope path` baked in via
+  `BatSpec.extra_args` — no new Python entry point.
 - **Frecency**: `fav` / `fav-del` sort matches by usage frecency (count × recency
   weight) before showing the menu; the top result is highlighted. Counts live in
   a JSON sidecar `<favorites_path>.usage` keyed by `"name|raw_path"`. `fav`
@@ -43,6 +56,12 @@ below.
   `constants.RECENCY_WEIGHTS`.
 - **Color**: emitted only to stderr menus when stderr is a TTY. `NO_COLOR`
   disables; `FAV_COLOR` (truthy/falsy) forces. Logic in `ui/colors.py`.
+- **Max results**: `fav` / `fav-del` menus and palette suggestions are capped
+  at `max_results` (default 10, `constants.DEFAULT_MAX_RESULTS`) — applied by
+  slicing the frecency-sorted candidates in the three consumers, not in
+  `ui/menu.py`. Persisted via `fav --set-limit N` (validates `N >= 1`, exit 2
+  otherwise) in a JSON sidecar `<favorites_path>.config` handled by
+  `config/user_config.UserConfig` (missing/corrupt/invalid → default).
 
 ## Module map
 
@@ -50,13 +69,14 @@ below.
 app/
 ├── constants.py             # FIELD_SEPARATOR, env vars, file names, RECENCY_WEIGHTS
 ├── io_utils.py              # atomic_write_text(path, body)
-├── config/settings.py       # Settings.from_env() — favorites_path, usage_path, log_level
+├── config/settings.py       # Settings.from_env() — favorites_path, usage_path, config_path, log_level
+├── config/user_config.py    # UserConfig (.config sidecar: max_results, load/save)
 ├── logging_setup.py         # configure_logging → stderr
 ├── favorites/
-│   ├── entry.py             # Favorite dataclass, validate_name, InvalidFavoriteError
+│   ├── entry.py             # Favorite dataclass, SearchScope, validate_name, InvalidFavoriteError
 │   ├── repository.py        # FavoritesRepository (load/save/append/remove_at)
 │   ├── usage.py             # UsageStore (frecency sidecar: score/sort/record/remove)
-│   ├── filter.py            # match(favs, query)
+│   ├── filter.py            # match(favs, query, scope); add_scope_argument/scope_from_args
 │   └── path_resolver.py     # resolve(raw), collapse_home(path)
 ├── palette_host.py          # FCC text provider: build_suggestions, record_selection, main loop
 ├── ui/
@@ -64,7 +84,7 @@ app/
 │   └── colors.py            # should_color, highlight, dim, init_color
 └── cli/
     ├── _common.py           # exit codes, bootstrap()
-    ├── fav.py               # main: filter → menu → print stdout
+    ├── fav.py               # main: filter → menu → print stdout; --set-limit N
     ├── fav_add.py           # main: prompt name, append
     ├── fav_del.py           # main: cwd-favorite check/menu → confirm → remove
     └── install_global.py    # render+write bat wrappers
@@ -80,9 +100,11 @@ provider `folders` ("Favorite Folders"). FCC launches
 `app/palette_host.py`).
 
 - `build_suggestions()` reuses the exact CLI stack (repository → `match()` →
-  `UsageStore.sort()` → `path_resolver.resolve()`); `title=name`,
-  `text=resolved path` (what FCC pastes), `subtitle=raw_path`. The favorites
-  file is reloaded on every query so `fav-add`/`fav-del` edits show live.
+  `UsageStore.sort()` → `max_results` slice → `path_resolver.resolve()`);
+  `title=name`, `text=resolved path` (what FCC pastes), `subtitle=raw_path`.
+  The favorites file is reloaded on every query so `fav-add`/`fav-del` edits
+  show live. No `--scope` input from FCC — palette suggestions always search
+  both name and path.
 - `record_selection()` handles FCC's fire-and-forget `selected` echo:
   rebuilds `Favorite(name=title, raw_path=subtitle)` and calls
   `UsageStore.record()` — same `name|raw_path` key CLI use writes, so both

@@ -6,27 +6,49 @@ haystack. Tab joiner prevents a token from straddling the name/path boundary.
 
 from __future__ import annotations
 
+import argparse
 from collections.abc import Sequence
 
-from app.favorites.entry import Favorite
+from app.constants import SCOPE_BOTH, SCOPE_NAME, SCOPE_PATH
+from app.favorites.entry import Favorite, SearchScope
 
 _HAYSTACK_SEP = "\t"
 
 
-def match(favorites: list[Favorite], tokens: Sequence[str] | str | None) -> list[Favorite]:
+def match(
+    favorites: list[Favorite],
+    tokens: Sequence[str] | str | None,
+    scope: SearchScope = SearchScope.BOTH,
+) -> list[Favorite]:
     """Return favorites whose joined name+path contains ALL tokens.
 
     ``tokens`` may be ``None``/empty (returns all), a single string (split on
-    whitespace), or a sequence of strings.
+    whitespace), or a sequence of strings. ``scope`` restricts which field(s)
+    are searched (name only, path only, or both — the default).
     """
     needles = _normalize(tokens)
     if not needles:
         return list(favorites)
-    return [fav for fav in favorites if _matches_all(_haystack(fav), needles)]
+    return [fav for fav in favorites if _matches_all(_haystack(fav, scope), needles)]
 
 
-def _haystack(fav: Favorite) -> str:
-    return _HAYSTACK_SEP.join(fav.searchable_fields()).casefold()
+def add_scope_argument(parser: argparse.ArgumentParser) -> None:
+    """Register the shared ``--scope`` flag on a CLI's argument parser."""
+    parser.add_argument(
+        "--scope",
+        choices=(SCOPE_NAME, SCOPE_PATH, SCOPE_BOTH),
+        default=SCOPE_BOTH,
+        help="Restrict the filter to the favorite name, its path, or both (default).",
+    )
+
+
+def scope_from_args(value: str) -> SearchScope:
+    """Map the ``--scope`` flag's string value to a SearchScope."""
+    return SearchScope(value)
+
+
+def _haystack(fav: Favorite, scope: SearchScope) -> str:
+    return _HAYSTACK_SEP.join(fav.searchable_fields(scope)).casefold()
 
 
 def _normalize(tokens: Sequence[str] | str | None) -> list[str]:

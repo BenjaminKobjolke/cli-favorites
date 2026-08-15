@@ -8,8 +8,9 @@ import sys
 from pathlib import Path
 
 from app.cli._common import EXIT_FAILURE, EXIT_OK, EXIT_USAGE, bootstrap
+from app.config.user_config import UserConfig
 from app.constants import ENV_TARGET_FILE
-from app.favorites.filter import match
+from app.favorites.filter import add_scope_argument, match, scope_from_args
 from app.favorites.path_resolver import resolve
 from app.ui.menu import MenuStyle, auto_pick_or_prompt
 
@@ -25,25 +26,41 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
         default=[],
         help="Filter tokens (AND, case-insensitive substring). Empty = list all.",
     )
+    parser.add_argument(
+        "--set-limit",
+        type=int,
+        metavar="N",
+        help="Persist the max number of menu/palette results (default 10) and exit.",
+    )
+    add_scope_argument(parser)
     return parser.parse_args(argv)
 
 
 def main() -> int:
-    _, repo, usage, log = bootstrap()
+    settings, repo, usage, log = bootstrap()
     try:
         args = _parse_args(sys.argv[1:])
     except SystemExit as err:
         return int(err.code) if isinstance(err.code, int) else EXIT_USAGE
+
+    if args.set_limit is not None:
+        if args.set_limit < 1:
+            log.error("--set-limit must be >= 1")
+            return EXIT_USAGE
+        UserConfig(max_results=args.set_limit).save(settings.config_path)
+        sys.stderr.write(f"Max results set to {args.set_limit}\n")
+        return EXIT_OK
 
     favorites = repo.load()
     if not favorites:
         log.error("no favorites found in %s", repo.path)
         return EXIT_FAILURE
 
-    candidates = usage.sort(match(favorites, args.query))
+    candidates = usage.sort(match(favorites, args.query, scope=scope_from_args(args.scope)))
     if not candidates:
         log.error("no favorites match %s", " ".join(args.query) or "<empty>")
         return EXIT_FAILURE
+    candidates = candidates[: UserConfig.load(settings.config_path).max_results]
 
     index = auto_pick_or_prompt(candidates, style=MenuStyle(highlight_index=0))
     if index is None:

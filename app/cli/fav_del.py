@@ -9,8 +9,9 @@ import sys
 from pathlib import Path
 
 from app.cli._common import EXIT_FAILURE, EXIT_OK, EXIT_USAGE, bootstrap
+from app.config.user_config import UserConfig
 from app.favorites.entry import Favorite
-from app.favorites.filter import match
+from app.favorites.filter import add_scope_argument, match, scope_from_args
 from app.favorites.path_resolver import resolve
 from app.favorites.repository import FavoritesRepository
 from app.favorites.usage import UsageStore
@@ -34,6 +35,7 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
         action="store_true",
         help="Skip confirmation prompts.",
     )
+    add_scope_argument(parser)
     return parser.parse_args(argv)
 
 
@@ -81,7 +83,7 @@ def _remove(
 
 
 def main() -> int:
-    _, repo, usage, log = bootstrap()
+    settings, repo, usage, log = bootstrap()
     try:
         args = _parse_args(sys.argv[1:])
     except SystemExit as err:
@@ -104,10 +106,11 @@ def main() -> int:
                 return _remove(repo, usage, favorites, current, log)
             # declined — fall through to the normal picker below
 
-    candidates = usage.sort(match(favorites, args.query))
+    candidates = usage.sort(match(favorites, args.query, scope=scope_from_args(args.scope)))
     if not candidates:
         log.error("no favorites match %s", " ".join(args.query) or "<empty>")
         return EXIT_FAILURE
+    candidates = candidates[: UserConfig.load(settings.config_path).max_results]
 
     index = auto_pick_or_prompt(candidates, style=MenuStyle(highlight_index=0))
     if index is None:
