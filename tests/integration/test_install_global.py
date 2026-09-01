@@ -148,3 +148,76 @@ def test_install_force_overwrites(tmp_path: Path) -> None:
     )
     assert result.returncode == 0, result.stderr
     assert (tmp_path / "fav.bat").read_text(encoding="utf-8") != "existing"
+
+
+def test_install_writes_ps1_only_for_capture_commands(tmp_path: Path) -> None:
+    result = subprocess.run(
+        [sys.executable, "-m", "app.cli.install_global", str(tmp_path)],
+        capture_output=True,
+        text=True,
+        env=_env(),
+        cwd=PROJECT_ROOT,
+        timeout=15,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    assert (tmp_path / "fav.ps1").exists()
+    assert (tmp_path / "fav-name.ps1").exists()
+    assert (tmp_path / "fav-dir.ps1").exists()
+    # These never change directory, so cmd's bat is enough.
+    assert not (tmp_path / "fav-add.ps1").exists()
+    assert not (tmp_path / "fav-del.ps1").exists()
+    assert not (tmp_path / "fav-set-limit.ps1").exists()
+
+
+def test_install_ps1_sets_location_from_target_file(tmp_path: Path) -> None:
+    subprocess.run(
+        [sys.executable, "-m", "app.cli.install_global", str(tmp_path)],
+        capture_output=True,
+        text=True,
+        env=_env(),
+        cwd=PROJECT_ROOT,
+        timeout=15,
+        check=False,
+    )
+    ps1 = (tmp_path / "fav.ps1").read_text(encoding="utf-8")
+    assert "FAV_TARGET_FILE" in ps1
+    assert "Set-Location -LiteralPath $target" in ps1
+    assert "-m app.cli.fav @args" in ps1
+    assert "$env:PYTHONSAFEPATH = '1'" in ps1
+    # PYTHONPATH is process-wide, so the wrapper must put back what it found.
+    assert "$env:PYTHONPATH = $oldPythonPath" in ps1
+
+
+def test_install_ps1_scope_variants_pass_flag(tmp_path: Path) -> None:
+    subprocess.run(
+        [sys.executable, "-m", "app.cli.install_global", str(tmp_path)],
+        capture_output=True,
+        text=True,
+        env=_env(),
+        cwd=PROJECT_ROOT,
+        timeout=15,
+        check=False,
+    )
+    assert "-m app.cli.fav --scope name @args" in (tmp_path / "fav-name.ps1").read_text(
+        encoding="utf-8"
+    )
+    assert "-m app.cli.fav --scope path @args" in (tmp_path / "fav-dir.ps1").read_text(
+        encoding="utf-8"
+    )
+
+
+def test_install_refuses_overwrite_when_only_ps1_exists(tmp_path: Path) -> None:
+    (tmp_path / "fav.ps1").write_text("existing", encoding="utf-8")
+    result = subprocess.run(
+        [sys.executable, "-m", "app.cli.install_global", str(tmp_path)],
+        input="n\n",
+        capture_output=True,
+        text=True,
+        env=_env(),
+        cwd=PROJECT_ROOT,
+        timeout=15,
+        check=False,
+    )
+    assert result.returncode != 0
+    assert (tmp_path / "fav.ps1").read_text(encoding="utf-8") == "existing"
